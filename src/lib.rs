@@ -1,32 +1,29 @@
 use std::collections::{HashMap};
 
-#[test]
-fn it_works() {
+trait ToJson {
+    fn to_json(&self) -> String;
 }
 
 enum Value {
     String(String),
     Number(f64),
-    JsonObject(JsonObject),
-    JsonArray(JsonArray),
+    Object(Object),
+    Array(Array),
     Boolean(bool),
     None,
 }
 
-type JsonArray  = Vec<Value>;
-type JsonObject = HashMap<String,Value>;
+type Array  = Vec<Value>;
+type Object = HashMap<String,Value>;
+
+impl ToJson for Array {
+    fn to_json(&self) -> String {
+        return format!("{}",5);
+    }
+}
 
 #[test]
-fn simple_array() {
-    let json_string: &str = "[1,2,3,4]";
-    let value: Value = Value::JsonArray(vec![Value::Number(1f64),Value::Number(2f64),Value::Number(3f64),Value::Number(4f64)]);
-    match value {
-        Value::JsonArray(json_array) => {
-            match json_array[0] {
-                Value::Number(n) => assert_eq!(n,1f64),
-                _ => assert!(false),
-            }
-        },
-        _ => assert!(false),
-    }
+fn to_json_sanity_check() {
+    let some_array: Array = vec![Value::Number(1f64),Value::Number(2f64)];
+    assert_eq!(some_array.to_json(),"5".to_string());
 }
