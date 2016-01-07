@@ -4,24 +4,17 @@ trait ToJson {
     fn to_json(&self) -> String;
 }
 
-trait ToValue {
-    fn to_value(&self) -> Value;
-    fn to_json(&self) -> String {
-        self.to_value().to_json()
-    }
-}
-
 struct Person {
     name: String,
     age: u8,
 }
 
-impl ToValue for Person {
-    fn to_value(&self) -> Value {
+impl ToJson for Person {
+    fn to_json(&self) -> String {
         let mut result: Object = Object::new();
         result.insert("name".to_string(),Value::String(self.name.clone()));
         result.insert("age".to_string(),Value::Number(self.age as f64));
-        Value::Object(result)
+        Value::Object(result).to_json()
     }
 }
 
