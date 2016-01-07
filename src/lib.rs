@@ -19,7 +19,8 @@ type Object = HashMap<String,Value>;
 impl ToJson for Value {
     fn to_json(&self) -> String {
         match *self {
-            Value::Number(x) => format!("{}",x),
+            Value::Number(n) => format!("{}",n),
+            Value::String(ref s) => format!("\"{}\"",s),
             _ => format!("{}",666),
         }
     }
@@ -36,7 +37,13 @@ impl ToJson for Array {
 }
 
 #[test]
-fn to_json_sanity_check() {
+fn array_of_numbers_check() {
     let some_array: Array = vec![Value::Number(1f64),Value::Number(2f64)];
     assert_eq!(some_array.to_json(),"[1,2]".to_string());
+}
+
+#[test]
+fn array_of_strings_check() {
+    let some_array: Array = vec![Value::String("a".to_string()),Value::String("b".to_string())];
+    assert_eq!(some_array.to_json(),"[\"a\",\"b\"]".to_string());
 }
