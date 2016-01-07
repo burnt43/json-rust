@@ -14,7 +14,7 @@ impl ToJson for Person {
         let mut result: Object = Object::new();
         result.insert("name".to_string(),Value::String(self.name.clone()));
         result.insert("age".to_string(),Value::Number(self.age as f64));
-        Value::Object(result).to_json()
+        result.to_json()
     }
 }
 
