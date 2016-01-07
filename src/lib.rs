@@ -4,6 +4,33 @@ trait ToJson {
     fn to_json(&self) -> String;
 }
 
+trait ToValue {
+    fn to_value(&self) -> Value;
+    fn to_json(&self) -> String {
+        self.to_value().to_json()
+    }
+}
+
+struct Person {
+    name: String,
+    age: u8,
+}
+
+impl ToValue for Person {
+    fn to_value(&self) -> Value {
+        let mut result: Object = Object::new();
+        result.insert("name".to_string(),Value::String(self.name.clone()));
+        result.insert("age".to_string(),Value::Number(self.age as f64));
+        Value::Object(result)
+    }
+}
+
+impl Person {
+    fn new(name: &str, age: u8) -> Person {
+        Person { name: name.to_string(), age: age }
+    }
+}
+
 enum Value {
     Array(Array),
     Boolean(bool),
@@ -43,9 +70,7 @@ impl ToJson for Object {
     fn to_json(&self) -> String {
         let mut result: String = String::new();
         result.push_str("{");
-        for (key,value) in self.iter() {
-            result.push_str( &format!("{}:{}",Value::String(key.clone()).to_json(),value.to_json()) );
-        }
+        result.push_str( &self.iter().map(|(key,value)| format!("{}:{}",Value::String(key.clone()).to_json(),value.to_json())).collect::<Vec<String>>().join(","));
         result.push_str("}");
         result
     }
@@ -62,6 +87,12 @@ fn simple_object_check() {
     let mut test_object: Object = Object::new();
     test_object.insert("name".to_string(),Value::String("James".to_string()));
     assert_eq!(&test_object.to_json(),"{\"name\":\"James\"}");
+}
+
+#[test]
+fn struct_as_object_check() {
+    let test_person: Person = Person::new("James",28);
+    assert_eq!(&test_person.to_json(),"{\"name\":\"James\",\"age\":28}");
 }
 
 #[test]
