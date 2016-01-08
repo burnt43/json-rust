@@ -5,22 +5,20 @@ trait ToJson {
 }
 
 struct Person {
-    name: String,
     age: u8,
 }
 
 impl ToJson for Person {
     fn to_json(&self) -> String {
         let mut result: Object = Object::new();
-        result.insert("name".to_string(),Value::String(self.name.clone()));
         result.insert("age".to_string(),Value::Number(self.age as f64));
         result.to_json()
     }
 }
 
 impl Person {
-    fn new(name: &str, age: u8) -> Person {
-        Person { name: name.to_string(), age: age }
+    fn new(age: u8) -> Person {
+        Person { age: age }
     }
 }
 
@@ -84,8 +82,8 @@ fn simple_object_check() {
 
 #[test]
 fn struct_as_object_check() {
-    let test_person: Person = Person::new("James",28);
-    assert_eq!(&test_person.to_json(),"{\"name\":\"James\",\"age\":28}");
+    let test_person: Person = Person::new(28);
+    assert_eq!(&test_person.to_json(),"{\"age\":28}");
 }
 
 #[test]
