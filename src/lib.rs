@@ -11,7 +11,7 @@ struct Person {
 impl ToJson for Person {
     fn to_json(&self) -> String {
         let mut result: Object = Object::new();
-        result.insert("age".to_string(),Value::Number(self.age as f64));
+        result.insert("age".to_string(),Value::Number(self.age as Number));
         result.to_json()
     }
 }
@@ -26,11 +26,12 @@ enum Value {
     Array(Array),
     Boolean(bool),
     None,
-    Number(f64),
+    Number(Number),
     Object(Object),
     String(String),
 }
 
+type Number = f64;
 type Array  = Vec<Value>;
 type Object = HashMap<String,Value>;
 
@@ -88,6 +89,10 @@ fn parse_string(json_string: &str) -> Result<String,ParseError> {
     }
 
     Ok(result)
+}
+
+fn parse_number(json_string: &str) -> Result<Number,ParseError> {
+    Ok(0f64)
 }
 
 impl ToJson for Array {
