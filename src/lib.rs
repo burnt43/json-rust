@@ -31,11 +31,6 @@ enum Value {
     String(String),
 }
 
-enum TopLevelJson {
-    Array(Array),
-    Object(Object),
-}
-
 type Array  = Vec<Value>;
 type Object = HashMap<String,Value>;
 
@@ -52,35 +47,60 @@ impl ToJson for Value {
     }
 }
 
-enum ParseState {
-    ExpectingBeginOfStructure,
-    ExpectingKeyName,
+enum ParseStringState {
+    ExpectingQuote,
+    ExpectingChars,
+    ExpectingEndOfString,
 }
+fn parse_string(json_string: &str) -> Option<String> {
+    let mut result = String::new();
+    let mut state  = ParseStringState::ExpectingQuote;
 
-// "{}"
-fn parse(json_string: &str) -> Option<TopLevelJson> {
-    let mut state: ParseState = ParseState::ExpectingBeginOfStructure;
-    let mut result: Option<TopLevelJson> = None;
-    for c in json_string.chars().collect::<Vec<char>>() {
+    for ch in json_string.chars() {
         match state {
-            ParseState::ExpectingBeginOfStructure => {
-                match c {
-                    '{' => {
-                        result = Some(TopLevelJson::Object(Object::new()));
-                        state  = ParseState::ExpectingKeyName;
+            ParseStringState::ExpectingQuote => {
+                match ch {
+                    '"' => {
+                        state = ParseStringState::ExpectingChars;
                     },
-                    _ => {},
+                    _    => { return None; },
                 }
             },
-            ParseState::ExpectingKeyName => {
-                match c {
-                    '}' => {},
-                    _ => {},
+            ParseStringState::ExpectingChars => {
+                match ch {
+                    '"' => {
+                        state = ParseStringState::ExpectingEndOfString;
+                    },
+                    _ => {
+                        result.push(ch);
+                    }
                 }
             },
+            ParseStringState::ExpectingEndOfString => {
+                return None;
+            }
         }
     }
+
+    Some(result)
+}
+
+fn parse_object(json_string: &str) -> Object {
+    let mut result = Object::new();
     result
+}
+
+fn parse_array(json_string: &str) -> Array {
+    let mut result = Array::new();
+    result
+}
+
+fn parse(json_string: &str) -> Option<Value> {
+    match json_string.chars().next().unwrap() {
+        '{' => Some(Value::Object(parse_object(json_string))),
+        '[' => Some(Value::Array(parse_array(json_string))),
+        _   => None
+    }
 }
 
 impl ToJson for Array {
@@ -104,10 +124,17 @@ impl ToJson for Object {
 }
 
 #[test]
-fn parse_empty_object_check() {
-    let json_string: &str = "{}";
-    match parse(json_string) {
-        Some(parse_json) => assert!(true),
+fn parse_an_empty_string() {
+    match parse_string("\"\"") {
+        Some(s) => assert_eq!("",&s),
+        None => assert!(false),
+    }
+}
+
+#[test]
+fn parse_a_non_empty_string() {
+    match parse_string("\"foobar\"") {
+        Some(s) => assert_eq!("foobar",&s),
         None => assert!(false),
     }
 }
