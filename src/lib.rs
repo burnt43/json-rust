@@ -47,12 +47,17 @@ impl ToJson for Value {
     }
 }
 
+#[derive(Debug)]
+enum ParseError {
+    UnexpectedToken(char),
+}
+
 enum ParseStringState {
     ExpectingQuote,
     ExpectingChars,
     ExpectingEndOfString,
 }
-fn parse_string(json_string: &str) -> Option<String> {
+fn parse_string(json_string: &str) -> Result<String,ParseError> {
     let mut result = String::new();
     let mut state  = ParseStringState::ExpectingQuote;
 
@@ -63,7 +68,7 @@ fn parse_string(json_string: &str) -> Option<String> {
                     '"' => {
                         state = ParseStringState::ExpectingChars;
                     },
-                    _    => { return None; },
+                    _    => { return Err(ParseError::UnexpectedToken(ch)) },
                 }
             },
             ParseStringState::ExpectingChars => {
@@ -77,30 +82,12 @@ fn parse_string(json_string: &str) -> Option<String> {
                 }
             },
             ParseStringState::ExpectingEndOfString => {
-                return None;
+                return Err(ParseError::UnexpectedToken(ch));
             }
         }
     }
 
-    Some(result)
-}
-
-fn parse_object(json_string: &str) -> Object {
-    let mut result = Object::new();
-    result
-}
-
-fn parse_array(json_string: &str) -> Array {
-    let mut result = Array::new();
-    result
-}
-
-fn parse(json_string: &str) -> Option<Value> {
-    match json_string.chars().next().unwrap() {
-        '{' => Some(Value::Object(parse_object(json_string))),
-        '[' => Some(Value::Array(parse_array(json_string))),
-        _   => None
-    }
+    Ok(result)
 }
 
 impl ToJson for Array {
@@ -125,18 +112,12 @@ impl ToJson for Object {
 
 #[test]
 fn parse_an_empty_string() {
-    match parse_string("\"\"") {
-        Some(s) => assert_eq!("",&s),
-        None => assert!(false),
-    }
+    assert_eq!(&parse_string("\"\"").unwrap(),"");
 }
 
 #[test]
 fn parse_a_non_empty_string() {
-    match parse_string("\"foobar\"") {
-        Some(s) => assert_eq!("foobar",&s),
-        None => assert!(false),
-    }
+    assert_eq!(&parse_string("\"foobar\"").unwrap(),"foobar");
 }
 
 #[test]
