@@ -59,6 +59,7 @@ trait SinkOrNoSink {
     fn is_sink(&self) -> bool;
 }
 
+#[derive(Debug)]
 enum ParseStringState {
     SquareOne,
     ExpectingChars,
@@ -104,6 +105,7 @@ fn parse_string(json_string: &str) -> Result<String,ParseError> {
                     '\\' => {
                         state = ParseStringState::EscapeCharFound;
                     },
+                    // TODO add the control characters that JSON does not allow here
                     _ => {
                         result.push(ch);
                     },
@@ -113,27 +115,35 @@ fn parse_string(json_string: &str) -> Result<String,ParseError> {
                 match ch {
                     '"' => {
                         result.push('"');
+                        state = ParseStringState::ExpectingChars;
                     },
                     '\\' => {
                         result.push('\\');
+                        state = ParseStringState::ExpectingChars;
                     },
                     '/' => {
                         result.push('/');
+                        state = ParseStringState::ExpectingChars;
                     },
                     'b' => {
                         result.push('\u{08}');
+                        state = ParseStringState::ExpectingChars;
                     },
                     'f' => {
                         result.push('\u{0c}');
+                        state = ParseStringState::ExpectingChars;
                     },
                     'n' => {
                         result.push('\n');
+                        state = ParseStringState::ExpectingChars;
                     },
                     'r' => {
                         result.push('\r');
+                        state = ParseStringState::ExpectingChars;
                     },
                     't' => {
                         result.push('\t');
+                        state = ParseStringState::ExpectingChars;
                     },
                     'u' => {
                         hex_string = String::new();
@@ -144,25 +154,34 @@ fn parse_string(json_string: &str) -> Result<String,ParseError> {
                     },
                 }
             },
-            ParseStringState::HexDigitExpected(ref mut n @ 0...3) => {
+            ParseStringState::HexDigitExpected(ref mut n @ 0...2) => {
                 match ch {
                     '0'...'9' | 'a'...'f' | 'A'...'F' => {
                         hex_string.push(ch);
-                        *n+=1;
+                        *n+=1; // effectively changes the state
                     },
                     _ => {
                         return Err(ParseError::UnexpectedToken(ch));
                     },
                 }
             },
-            ParseStringState::HexDigitExpected(4) => {
-                let hex_string_int: u32 = u32::from_str_radix(&hex_string,16).unwrap();
-                match std::char::from_u32(hex_string_int) {
-                    Some(hex_ch) => {
-                        result.push(hex_ch);
+            ParseStringState::HexDigitExpected(3) => {
+                match ch {
+                    '0'...'9' | 'a'...'f' | 'A'...'F' => {
+                        hex_string.push(ch);
+                        let hex_string_int: u32 = u32::from_str_radix(&hex_string,16).unwrap();
+                        match std::char::from_u32(hex_string_int) {
+                            Some(hex_ch) => {
+                                result.push(hex_ch);
+                                state = ParseStringState::ExpectingChars;
+                            },
+                            None => {
+                                return Err(ParseError::InvalidUnicodeChar(hex_string_int));
+                            },
+                        }
                     },
-                    None => {
-                        return Err(ParseError::InvalidUnicodeChar(hex_string_int));
+                    _ => {
+                        return Err(ParseError::UnexpectedToken(ch));
                     },
                 }
             },
@@ -175,7 +194,14 @@ fn parse_string(json_string: &str) -> Result<String,ParseError> {
         }
     }
 
-    Ok(result)
+    if !state.is_sink() {
+        match json_string.chars().last() {
+            Some(ch) => Err(ParseError::UnexpectedToken(ch)),
+            None     => Err(ParseError::EmptyStringGiven),
+        }
+    } else {
+        Ok(result)
+    }
 }
 
 enum ParseNumberState {
@@ -396,6 +422,12 @@ fn parse_an_empty_string() {
 #[test]
 fn parse_a_non_empty_string() {
     assert_eq!(&parse_string("\"foobar\"").unwrap(),"foobar");
+}
+
+#[test]
+fn parse_a_string_with_escape() {
+    //assert_eq!(&parse_string("\"\\n\"").unwrap(),"\n");
+    assert_eq!(&parse_string("\"\\u0041\"").unwrap(),"A");
 }
 
 #[test]
