@@ -52,25 +52,48 @@ impl ToJson for Value {
 enum ParseError {
     UnexpectedToken(char),
     EmptyStringGiven,
+    InvalidUnicodeChar(u32),
+}
+
+trait SinkOrNoSink {
+    fn is_sink(&self) -> bool;
 }
 
 enum ParseStringState {
-    ExpectingQuote,
+    SquareOne,
     ExpectingChars,
+    EscapeCharFound,
     ExpectingEndOfString,
+    HexDigitExpected(u8),
 }
+
+impl SinkOrNoSink for ParseStringState {
+    fn is_sink(&self) -> bool {
+        match *self {
+            ParseStringState::SquareOne            => false,
+            ParseStringState::ExpectingChars       => false,
+            ParseStringState::EscapeCharFound      => false,
+            ParseStringState::HexDigitExpected(_)  => false,
+            ParseStringState::ExpectingEndOfString => true,
+        }
+    }
+}
+
 fn parse_string(json_string: &str) -> Result<String,ParseError> {
-    let mut result = String::new();
-    let mut state  = ParseStringState::ExpectingQuote;
+    let mut result:     String           = String::new();
+    let mut state:      ParseStringState = ParseStringState::SquareOne;
+    let mut hex_string: String           = String::new();
 
     for ch in json_string.chars() {
         match state {
-            ParseStringState::ExpectingQuote => {
+            ParseStringState::SquareOne => {
                 match ch {
                     '"' => {
                         state = ParseStringState::ExpectingChars;
                     },
-                    _    => { return Err(ParseError::UnexpectedToken(ch)) },
+                    _ => {
+                        return Err(ParseError::UnexpectedToken(ch))
+                    },
                 }
             },
             ParseStringState::ExpectingChars => {
@@ -78,14 +101,77 @@ fn parse_string(json_string: &str) -> Result<String,ParseError> {
                     '"' => {
                         state = ParseStringState::ExpectingEndOfString;
                     },
+                    '\\' => {
+                        state = ParseStringState::EscapeCharFound;
+                    },
                     _ => {
                         result.push(ch);
-                    }
+                    },
                 }
+            },
+            ParseStringState::EscapeCharFound => {
+                match ch {
+                    '"' => {
+                        result.push('"');
+                    },
+                    '\\' => {
+                        result.push('\\');
+                    },
+                    '/' => {
+                        result.push('/');
+                    },
+                    'b' => {
+                        result.push('\u{08}');
+                    },
+                    'f' => {
+                        result.push('\u{0c}');
+                    },
+                    'n' => {
+                        result.push('\n');
+                    },
+                    'r' => {
+                        result.push('\r');
+                    },
+                    't' => {
+                        result.push('\t');
+                    },
+                    'u' => {
+                        hex_string = String::new();
+                        state = ParseStringState::HexDigitExpected(0);
+                    },
+                    _ => {
+                        return Err(ParseError::UnexpectedToken(ch));
+                    },
+                }
+            },
+            ParseStringState::HexDigitExpected(ref mut n @ 0...3) => {
+                match ch {
+                    '0'...'9' | 'a'...'f' | 'A'...'F' => {
+                        hex_string.push(ch);
+                        *n+=1;
+                    },
+                    _ => {
+                        return Err(ParseError::UnexpectedToken(ch));
+                    },
+                }
+            },
+            ParseStringState::HexDigitExpected(4) => {
+                let hex_string_int: u32 = u32::from_str_radix(&hex_string,16).unwrap();
+                match std::char::from_u32(hex_string_int) {
+                    Some(hex_ch) => {
+                        result.push(hex_ch);
+                    },
+                    None => {
+                        return Err(ParseError::InvalidUnicodeChar(hex_string_int));
+                    },
+                }
+            },
+            ParseStringState::HexDigitExpected(_) => {
+                return Err(ParseError::UnexpectedToken(ch));
             },
             ParseStringState::ExpectingEndOfString => {
                 return Err(ParseError::UnexpectedToken(ch));
-            }
+            },
         }
     }
 
@@ -104,9 +190,6 @@ enum ParseNumberState {
     ExponentiationDigitFound,
 }
 
-trait SinkOrNoSink {
-    fn is_sink(&self) -> bool;
-}
 
 impl SinkOrNoSink for ParseNumberState {
     fn is_sink(&self) -> bool {
@@ -302,6 +385,7 @@ fn rust_parse_tests() {
     "0.1E3".parse::<Number>().unwrap();
     "0.1E+3".parse::<Number>().unwrap();
     "0.1E-3".parse::<Number>().unwrap();
+    assert_eq!( u64::from_str_radix("0f",16).unwrap(), 15 );
 }
 
 #[test]
