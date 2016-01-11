@@ -425,8 +425,8 @@ fn parse_a_non_empty_string() {
 }
 
 #[test]
-fn parse_a_string_with_escape() {
-    //assert_eq!(&parse_string("\"\\n\"").unwrap(),"\n");
+fn parse_strings_with_escapes() {
+    assert_eq!(&parse_string("\"\\n\"").unwrap(),"\n");
     assert_eq!(&parse_string("\"\\u0041\"").unwrap(),"A");
 }
 
