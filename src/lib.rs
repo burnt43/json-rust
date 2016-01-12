@@ -371,7 +371,9 @@ impl ToJson for Array {
     fn to_json(&self) -> String {
         let mut result: String = String::new();
         result.push_str("[");
-        result.push_str( &self.iter().map(|value| value.to_json()).collect::<Vec<String>>().join(",") );
+        result.push_str( &self
+                         .iter()
+                         .map(|value| value.to_json()).collect::<Vec<String>>().join(",") );
         result.push_str("]");
         result
     }
@@ -381,7 +383,10 @@ impl ToJson for Object {
     fn to_json(&self) -> String {
         let mut result: String = String::new();
         result.push_str("{");
-        result.push_str( &self.iter().map(|(key,value)| format!("{}:{}",Value::String(key.clone()).to_json(),value.to_json())).collect::<Vec<String>>().join(","));
+        result.push_str( &self
+                         .iter()
+                         .map(|(key,value)| format!("{}:{}", Value::String(key.clone()).to_json(), value.to_json()))
+                         .collect::<Vec<String>>().join(",") );
         result.push_str("}");
         result
     }
