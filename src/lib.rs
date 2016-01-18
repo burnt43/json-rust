@@ -486,7 +486,6 @@ fn parse_an_empty_string() {
     assert_eq!(&parse_string("\"\"").unwrap(),"");
 }
 
-/*
 #[test]
 fn parse_a_non_empty_string() {
     assert_eq!(&parse_string("\"foobar\"").unwrap(),"foobar");
@@ -497,7 +496,6 @@ fn parse_strings_with_escapes() {
     assert_eq!(&parse_string("\"\\n\"").unwrap(),"\n");
     assert_eq!(&parse_string("\"\\u0041\"").unwrap(),"A");
 }
-*/
 
 #[test]
 fn empty_object_check() {
