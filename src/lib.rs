@@ -94,9 +94,8 @@ fn parse_string(json_string: &str) -> Result<String,ParseError> {
     for ch in json_string.chars() {
         result = parser.push(ch);
         match result {
-            ParserResult::Ok(_)      => {},
-            ParserResult::Incomplete => {},
-            ParserResult::Err(ref e) => { break; }
+            ParserResult::Err(ref e) => { break; },
+            _                        => {},
         }
     }
     match result {
