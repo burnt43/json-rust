@@ -52,6 +52,7 @@ impl ToJson for Value {
 enum ParseError {
     UnexpectedToken(char),
     UnterminatedToken(char),
+    UnexpectedEndOfInput,
     EmptyStringGiven,
     InvalidUnicodeChar(u32),
 }
@@ -88,17 +89,27 @@ struct StringParser {
 }
 
 fn parse_string(json_string: &str) -> Result<String,ParseError> {
-    let mut parser: StringParser = StringParser::new();
-    let mut result: Result<String,ParseError> = Err(ParseError::EmptyStringGiven);
+    let mut parser: StringParser                    = StringParser::new();
+    let mut result: ParserResult<String,ParseError> = ParserResult::Err(ParseError::EmptyStringGiven);
     for ch in json_string.chars() {
         result = parser.push(ch);
         match result {
-            Ok(_) => {},
-            Err(ParseError::UnterminatedToken(_)) => {},
-            Err(ref e) => { break; }
+            ParserResult::Ok(_)      => {},
+            ParserResult::Incomplete => {},
+            ParserResult::Err(ref e) => { break; }
         }
     }
-    result
+    match result {
+        ParserResult::Incomplete => { Err(ParseError::UnterminatedToken('"')) },
+        ParserResult::Ok(string) => { Ok(string) },
+        ParserResult::Err(e)     => { Err(e) },
+    }
+}
+
+enum ParserResult<T,E> {
+    Ok(T),
+    Err(E),
+    Incomplete,
 }
 
 impl StringParser {
@@ -109,7 +120,7 @@ impl StringParser {
             state:      ParseStringState::SquareOne
         }
     }
-    fn push(&mut self, ch: char) -> Result<String,ParseError> {
+    fn push(&mut self, ch: char) -> ParserResult<String,ParseError> {
         match self.state {
             ParseStringState::SquareOne => {
                 match ch {
@@ -117,7 +128,7 @@ impl StringParser {
                         self.state = ParseStringState::ExpectingChars;
                     },
                     _ => {
-                        return Err(ParseError::UnexpectedToken(ch))
+                        return ParserResult::Err(ParseError::UnexpectedToken(ch))
                     },
                 }
             },
@@ -125,7 +136,7 @@ impl StringParser {
                 match ch {
                     '"' => {
                         self.state = ParseStringState::ExpectingEndOfString;
-                        return Ok(self.buffer.clone());
+                        return ParserResult::Ok(self.buffer.clone());
                     },
                     '\\' => {
                         self.state = ParseStringState::EscapeCharFound;
@@ -175,7 +186,7 @@ impl StringParser {
                         self.state = ParseStringState::HexDigitExpected(0);
                     },
                     _ => {
-                        return Err(ParseError::UnexpectedToken(ch));
+                        return ParserResult::Err(ParseError::UnexpectedToken(ch));
                     },
                 }
             },
@@ -186,7 +197,7 @@ impl StringParser {
                         *n+=1; // effectively changes the state
                     },
                     _ => {
-                        return Err(ParseError::UnexpectedToken(ch));
+                        return ParserResult::Err(ParseError::UnexpectedToken(ch));
                     },
                 }
             },
@@ -201,23 +212,23 @@ impl StringParser {
                                 self.state = ParseStringState::ExpectingChars;
                             },
                             None => {
-                                return Err(ParseError::InvalidUnicodeChar(hex_string_int));
+                                return ParserResult::Err(ParseError::InvalidUnicodeChar(hex_string_int));
                             },
                         }
                     },
                     _ => {
-                        return Err(ParseError::UnexpectedToken(ch));
+                        return ParserResult::Err(ParseError::UnexpectedToken(ch));
                     },
                 }
             },
             ParseStringState::HexDigitExpected(_) => {
-                return Err(ParseError::UnexpectedToken(ch));
+                return ParserResult::Err(ParseError::UnexpectedToken(ch));
             },
             ParseStringState::ExpectingEndOfString => {
-                return Err(ParseError::UnexpectedToken(ch));
+                return ParserResult::Err(ParseError::UnexpectedToken(ch));
             },
         }
-        Err(ParseError::UnterminatedToken('"'))
+        ParserResult::Incomplete
     }
 }
 
