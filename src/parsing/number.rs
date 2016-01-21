@@ -1,3 +1,5 @@
+//TODO rewrite this like the StringParser. Get ride of SinkOrNoSink
+
 use parsing::{ParseError, SinkOrNoSink};
 use types::{Number};
 
