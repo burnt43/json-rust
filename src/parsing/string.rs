@@ -1,5 +1,5 @@
 use std::char;
-use parsing::{ParseResult, ParseError};
+use parsing::{ParseError, SinkOrNoSink};
 
 struct StringParser {
     buffer:     String,
@@ -7,7 +7,6 @@ struct StringParser {
     state:      ParseState,
 }
 
-#[derive(Debug)]
 enum ParseState {
     SquareOne,
     ExpectingChars,
@@ -17,20 +16,11 @@ enum ParseState {
 }
 
 fn parse(json_string: &str) -> Result<String,ParseError> {
-    let mut parser: StringParser        = StringParser::new();
-    let mut result: ParseResult<String> = ParseResult::Err(ParseError::EmptyStringGiven);
+    let mut parser: StringParser = StringParser::new();
     for ch in json_string.chars() {
-        result = parser.push(ch);
-        match result {
-            ParseResult::Err(ref e) => { break; },
-            _                        => {},
-        }
+        try!(parser.push_token(ch))
     }
-    match result {
-        ParseResult::Incomplete => { Err(ParseError::UnterminatedToken('"')) },
-        ParseResult::Ok(string) => { Ok(string) },
-        ParseResult::Err(e)     => { Err(e) },
-    }
+    parser.get_result()
 }
 
 impl StringParser {
@@ -41,7 +31,16 @@ impl StringParser {
             state:      ParseState::SquareOne
         }
     }
-    fn push(&mut self, ch: char) -> ParseResult<String> {
+    fn get_result(&self) -> Result<String,ParseError> {
+        match self.state {
+            ParseState::SquareOne            => { Err(ParseError::EmptyStringGiven) }, //TODO use a real error
+            ParseState::ExpectingChars       => { Err(ParseError::EmptyStringGiven) }, //TODO use a real error
+            ParseState::EscapeCharFound      => { Err(ParseError::EmptyStringGiven) }, //TODO use a real error
+            ParseState::ExpectingEndOfString => { Ok(self.buffer.clone()) },
+            ParseState::HexDigitExpected(_)  => { Err(ParseError::EmptyStringGiven) }, //TODO use a real error
+        }
+    }
+    fn push_token(&mut self, ch: char) -> Result<(),ParseError> {
         match self.state {
             ParseState::SquareOne => {
                 match ch {
@@ -49,7 +48,7 @@ impl StringParser {
                         self.state = ParseState::ExpectingChars;
                     },
                     _ => {
-                        return ParseResult::Err(ParseError::UnexpectedToken(ch))
+                        return Err(ParseError::UnexpectedToken(ch))
                     },
                 }
             },
@@ -57,7 +56,6 @@ impl StringParser {
                 match ch {
                     '"' => {
                         self.state = ParseState::ExpectingEndOfString;
-                        return ParseResult::Ok(self.buffer.clone());
                     },
                     '\\' => {
                         self.state = ParseState::EscapeCharFound;
@@ -107,7 +105,7 @@ impl StringParser {
                         self.state = ParseState::HexDigitExpected(0);
                     },
                     _ => {
-                        return ParseResult::Err(ParseError::UnexpectedToken(ch));
+                        return Err(ParseError::UnexpectedToken(ch));
                     },
                 }
             },
@@ -118,7 +116,7 @@ impl StringParser {
                         *n+=1; // effectively changes the state
                     },
                     _ => {
-                        return ParseResult::Err(ParseError::UnexpectedToken(ch));
+                        return Err(ParseError::UnexpectedToken(ch));
                     },
                 }
             },
@@ -133,26 +131,27 @@ impl StringParser {
                                 self.state = ParseState::ExpectingChars;
                             },
                             None => {
-                                return ParseResult::Err(ParseError::InvalidUnicodeChar(hex_string_int));
+                                return Err(ParseError::InvalidUnicodeChar(hex_string_int));
                             },
                         }
                     },
                     _ => {
-                        return ParseResult::Err(ParseError::UnexpectedToken(ch));
+                        return Err(ParseError::UnexpectedToken(ch));
                     },
                 }
             },
             ParseState::HexDigitExpected(_) => {
-                return ParseResult::Err(ParseError::UnexpectedToken(ch));
+                return Err(ParseError::UnexpectedToken(ch));
             },
             ParseState::ExpectingEndOfString => {
-                return ParseResult::Err(ParseError::UnexpectedToken(ch));
+                return Err(ParseError::UnexpectedToken(ch));
             },
         }
-        ParseResult::Incomplete
+        Ok(())
     }
 }
 
+// HAPPY PATHS
 #[test]
 fn parse_an_empty_string() {
     assert_eq!(&parse("\"\"").unwrap(),"");
@@ -167,4 +166,20 @@ fn parse_a_non_empty_string() {
 fn parse_strings_with_escapes() {
     assert_eq!(&parse("\"\\n\"").unwrap(),"\n");
     assert_eq!(&parse("\"\\u0041\"").unwrap(),"A");
+}
+
+// SAD PATHS
+#[test]
+fn parse_unterminated_string_fails() {
+    assert!(parse("\"unterminated string").is_err());
+}
+
+#[test]
+fn parse_nothingness_fails() {
+    assert!(parse("").is_err());
+}
+
+#[test]
+fn parse_invalid_escape_sequence_fails() {
+    assert!(parse("\\h").is_err());
 }

@@ -10,12 +10,6 @@ enum ParseError {
     InvalidUnicodeChar(u32),
 }
 
-enum ParseResult<T> {
-    Ok(T),
-    Err(ParseError),
-    Incomplete,
-}
-
 trait SinkOrNoSink {
     fn is_sink(&self) -> bool;
 }

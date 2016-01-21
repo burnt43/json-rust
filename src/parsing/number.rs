@@ -1,7 +1,7 @@
 use parsing::{ParseError, SinkOrNoSink};
 use types::{Number};
 
-enum ParseNumberState {
+enum ParseState {
     SquareOne,
     FirstDigitZero,
     NegativeFound,
@@ -14,137 +14,153 @@ enum ParseNumberState {
 }
 
 
-impl SinkOrNoSink for ParseNumberState {
+impl SinkOrNoSink for ParseState {
     fn is_sink(&self) -> bool {
         match *self {
-            ParseNumberState::SquareOne                 => false,
-            ParseNumberState::FirstDigitZero            => true,
-            ParseNumberState::NegativeFound             => false,
-            ParseNumberState::DigitsLeftOfDecimal       => true,
-            ParseNumberState::DecimalFound              => false,
-            ParseNumberState::DigitsRightOfDecimal      => true,
-            ParseNumberState::ExponentiationFound       => false,
-            ParseNumberState::SignedExponentiationFound => false,
-            ParseNumberState::ExponentiationDigitFound  => true,
+            ParseState::SquareOne                 => false,
+            ParseState::FirstDigitZero            => true,
+            ParseState::NegativeFound             => false,
+            ParseState::DigitsLeftOfDecimal       => true,
+            ParseState::DecimalFound              => false,
+            ParseState::DigitsRightOfDecimal      => true,
+            ParseState::ExponentiationFound       => false,
+            ParseState::SignedExponentiationFound => false,
+            ParseState::ExponentiationDigitFound  => true,
         }
     }
+}
+
+struct NumberParser {
+    state:  ParseState,
+    buffer: String,
 }
 
 fn parse(json_string: &str) -> Result<Number,ParseError> {
-    let mut state:         ParseNumberState      = ParseNumberState::SquareOne;
-    let mut number_string: String                = String::new();
-
-    // Create the FSA for parsing
+    let mut parser: NumberParser = NumberParser::new();
     for ch in json_string.chars() {
-        match state {
-            ParseNumberState::SquareOne => {
+        parser.push_token(ch);
+    }
+    Ok(0f64)
+    //Ok(json_string.parse::<Number>().unwrap())
+}
+
+impl NumberParser {
+    fn new() -> NumberParser {
+        NumberParser {
+            state:  ParseState::SquareOne,
+            buffer: String::new(),
+        }
+    }
+    fn push_token(&mut self, ch: char) -> Result<(),ParseError> {
+        match self.state {
+            ParseState::SquareOne => {
                 match ch {
                     '-' => {
-                        state = ParseNumberState::NegativeFound;
+                        self.state = ParseState::NegativeFound;
                     },
                     '0' => {
-                        state = ParseNumberState::FirstDigitZero;
+                        self.state = ParseState::FirstDigitZero;
                     },
                     '1'...'9' => {
-                        state = ParseNumberState::DigitsLeftOfDecimal;
+                        self.state = ParseState::DigitsLeftOfDecimal;
                     },
                     _ => {
                         return Err(ParseError::UnexpectedToken(ch));
                     }
                 }
             },
-            ParseNumberState::DigitsLeftOfDecimal => {
+            ParseState::DigitsLeftOfDecimal => {
                 match ch {
                     '.' => {
-                        state = ParseNumberState::DecimalFound;
+                        self.state = ParseState::DecimalFound;
                     },
                     'e' | 'E' => {
-                        state = ParseNumberState::ExponentiationFound;
+                        self.state = ParseState::ExponentiationFound;
                     },
                     '0'...'9' => {
-                        state = ParseNumberState::DigitsLeftOfDecimal;
+                        self.state = ParseState::DigitsLeftOfDecimal;
                     },
                     _ => {
                         return Err(ParseError::UnexpectedToken(ch));
                     }
                 }
             },
-            ParseNumberState::FirstDigitZero => {
+            ParseState::FirstDigitZero => {
                 match ch {
                     '.' => {
-                        state = ParseNumberState::DecimalFound;
+                        self.state = ParseState::DecimalFound;
                     },
                     'e' | 'E' => {
-                        state = ParseNumberState::ExponentiationFound;
+                        self.state = ParseState::ExponentiationFound;
                     },
                     _ => {
                         return Err(ParseError::UnexpectedToken(ch));
                     }
                 }
             },
-            ParseNumberState::DecimalFound => {
+            ParseState::DecimalFound => {
                 match ch {
                     '0'...'9' => {
-                        state = ParseNumberState::DigitsRightOfDecimal;
+                        self.state = ParseState::DigitsRightOfDecimal;
                     },
                     _ => {
                         return Err(ParseError::UnexpectedToken(ch));
                     },
                 }
             },
-            ParseNumberState::DigitsRightOfDecimal => {
+            ParseState::DigitsRightOfDecimal => {
                 match ch {
                     '0'...'9' => {
-                        state = ParseNumberState::DigitsRightOfDecimal;
+                        self.state = ParseState::DigitsRightOfDecimal;
                     },
                     'e' | 'E' => {
-                        state = ParseNumberState::ExponentiationFound;
+                        self.state = ParseState::ExponentiationFound;
                     },
                     _ => {
                         return Err(ParseError::UnexpectedToken(ch));
                     },
                 }
             },
-            ParseNumberState::NegativeFound => {
+            ParseState::NegativeFound => {
                 match ch {
                     '0' => {
-                        state = ParseNumberState::FirstDigitZero;
+                        self.state = ParseState::FirstDigitZero;
                     },
                     '1'...'9' => {
-                        state = ParseNumberState::DigitsLeftOfDecimal;
+                        self.state = ParseState::DigitsLeftOfDecimal;
                     },
                     _ => {
                         return Err(ParseError::UnexpectedToken(ch));
                     },
                 }
             },
-            ParseNumberState::ExponentiationFound => {
+            ParseState::ExponentiationFound => {
                 match ch {
                     '-' | '+' => {
-                        state = ParseNumberState::SignedExponentiationFound;
+                        self.state = ParseState::SignedExponentiationFound;
                     },
                     '0'...'9' => {
-                        state = ParseNumberState::ExponentiationDigitFound;
+                        self.state = ParseState::ExponentiationDigitFound;
                     },
                     _ => {
                         return Err(ParseError::UnexpectedToken(ch));
                     },
                 }
             },
-            ParseNumberState::SignedExponentiationFound => {
+            ParseState::SignedExponentiationFound => {
                 match ch {
                     '0'...'9' => {
-                        state = ParseNumberState::ExponentiationDigitFound;
+                        self.state = ParseState::ExponentiationDigitFound;
                     },
                     _ => {
                         return Err(ParseError::UnexpectedToken(ch));
                     },
                 }
             },
-            ParseNumberState::ExponentiationDigitFound => {
+            ParseState::ExponentiationDigitFound => {
                 match ch {
                     '0'...'9' => {
-                        state = ParseNumberState::ExponentiationDigitFound;
+                        self.state = ParseState::ExponentiationDigitFound;
                     },
                     _ => {
                         return Err(ParseError::UnexpectedToken(ch));
@@ -152,17 +168,11 @@ fn parse(json_string: &str) -> Result<Number,ParseError> {
                 }
             },
         }
-    }
-
-    if !state.is_sink() {
-        match json_string.chars().last() {
-            Some(ch) => Err(ParseError::UnexpectedToken(ch)),
-            None     => Err(ParseError::EmptyStringGiven),
-        }
-    } else {
-        Ok(json_string.parse::<Number>().unwrap())
+        self.buffer.push(ch);
+        Ok(())
     }
 }
+
 
 #[test]
 fn valid_json_numbers_pass() {
