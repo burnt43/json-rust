@@ -1,6 +1,7 @@
 pub mod string;
 pub mod number;
 pub mod object;
+pub mod nil;
 
 #[derive(Debug)]
 enum ParseError {

@@ -1,4 +1,5 @@
-use parsing::{Parser,ParseError};
+use parsing::{Parser, ParseError};
+use parsing::nil::{NilParser};
 use types::{Object};
 
 enum ParseState {
@@ -6,8 +7,8 @@ enum ParseState {
 }
 
 struct ObjectParser {
-    object: Object,
-    state:  ParseState,
+    object:     Object,
+    state:      ParseState,
 }
 
 fn parse(json_string: &str) -> Result<Object,ParseError> {
@@ -21,8 +22,8 @@ fn parse(json_string: &str) -> Result<Object,ParseError> {
 impl ObjectParser {
     fn new() -> ObjectParser {
         ObjectParser {
-            object: Object::new(),
-            state:  ParseState::SquareOne,
+            object:     Object::new(),
+            state:      ParseState::SquareOne,
         }
     }
 }
