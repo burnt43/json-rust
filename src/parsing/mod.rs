@@ -10,3 +10,7 @@ enum ParseError {
     EmptyStringGiven,
     InvalidUnicodeChar(u32),
 }
+
+trait Parser {
+    fn push_token(&mut self, ch: char) -> Result<(),ParseError>;
+}

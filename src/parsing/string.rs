@@ -1,5 +1,5 @@
 use std::char;
-use parsing::{ParseError};
+use parsing::{Parser,ParseError};
 
 struct StringParser {
     buffer:     String,
@@ -40,6 +40,9 @@ impl StringParser {
             ParseState::ExpectingEndOfString => { Ok(self.buffer.clone()) },
         }
     }
+}
+
+impl Parser for StringParser {
     fn push_token(&mut self, ch: char) -> Result<(),ParseError> {
         match self.state {
             ParseState::SquareOne => {

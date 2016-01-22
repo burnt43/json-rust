@@ -1,4 +1,4 @@
-use parsing::{ParseError};
+use parsing::{Parser,ParseError};
 use types::{Object};
 
 enum ParseState {
@@ -25,7 +25,10 @@ impl ObjectParser {
             state:  ParseState::SquareOne,
         }
     }
-    fn push_token(&self, ch: char) -> Result<(),ParseError> {
+}
+
+impl Parser for ObjectParser {
+    fn push_token(&mut self, ch: char) -> Result<(),ParseError> {
         match self.state {
             ParseState::SquareOne => {
                 match ch {
