@@ -1,5 +1,6 @@
 pub mod string;
 pub mod number;
+pub mod object;
 
 #[derive(Debug)]
 enum ParseError {
