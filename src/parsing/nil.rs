@@ -11,7 +11,7 @@ fn parse(string: &str) -> Result<(),ParseError> {
 pub struct NilParser;
 
 impl NilParser {
-    fn new() -> NilParser {
+    pub fn new() -> NilParser {
         NilParser
     }
 }
