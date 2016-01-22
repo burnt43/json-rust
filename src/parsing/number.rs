@@ -182,6 +182,7 @@ fn valid_json_numbers_pass() {
     assert_eq!( parse("3E2").unwrap(), 300 as Number );
     assert_eq!( parse("5e-2").unwrap(), 0.05 as Number );
     assert_eq!( parse("6E-1").unwrap(), 0.6 as Number );
+    assert_eq!( parse("3e+3").unwrap(), 3000 as Number );
 }
 
 #[test]
