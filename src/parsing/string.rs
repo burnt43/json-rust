@@ -33,11 +33,11 @@ impl StringParser {
     }
     fn get_result(&self) -> Result<String,ParseError> {
         match self.state {
-            ParseState::SquareOne            => { Err(ParseError::EmptyStringGiven) }, //TODO use a real error
-            ParseState::ExpectingChars       => { Err(ParseError::EmptyStringGiven) }, //TODO use a real error
-            ParseState::EscapeCharFound      => { Err(ParseError::EmptyStringGiven) }, //TODO use a real error
+            ParseState::SquareOne            => { Err(ParseError::EmptyStringGiven) },
+            ParseState::ExpectingChars       => { Err(ParseError::UnterminatedToken('"')) },
+            ParseState::EscapeCharFound      => { Err(ParseError::UnterminatedToken('"')) },
+            ParseState::HexDigitExpected(_)  => { Err(ParseError::UnterminatedToken('"')) },
             ParseState::ExpectingEndOfString => { Ok(self.buffer.clone()) },
-            ParseState::HexDigitExpected(_)  => { Err(ParseError::EmptyStringGiven) }, //TODO use a real error
         }
     }
     fn push_token(&mut self, ch: char) -> Result<(),ParseError> {

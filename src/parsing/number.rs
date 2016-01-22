@@ -35,13 +35,13 @@ impl NumberParser {
     }
     fn get_result(&self) -> Result<Number,ParseError> {
         match self.state {
-            ParseState::SquareOne 
-            | ParseState::NegativeFound 
+            ParseState::SquareOne => { Err(ParseError::EmptyStringGiven) }, 
+            ParseState::NegativeFound 
             | ParseState::DecimalFound 
             | ParseState::ExponentiationFound 
             | ParseState::SignedExponentiationFound => {
-                Err(ParseError::EmptyStringGiven)
-            }, //TODO use a real error
+                Err(ParseError::UnexpectedToken(self.buffer.chars().last().unwrap()))
+            },
             ParseState::FirstDigitZero
             | ParseState::DigitsLeftOfDecimal 
             | ParseState::DigitsRightOfDecimal 
