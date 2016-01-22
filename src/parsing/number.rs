@@ -1,6 +1,4 @@
-//TODO rewrite this like the StringParser. Get ride of SinkOrNoSink
-
-use parsing::{ParseError, SinkOrNoSink};
+use parsing::{ParseError};
 use types::{Number};
 
 enum ParseState {
@@ -15,23 +13,6 @@ enum ParseState {
     ExponentiationDigitFound,
 }
 
-
-impl SinkOrNoSink for ParseState {
-    fn is_sink(&self) -> bool {
-        match *self {
-            ParseState::SquareOne                 => false,
-            ParseState::FirstDigitZero            => true,
-            ParseState::NegativeFound             => false,
-            ParseState::DigitsLeftOfDecimal       => true,
-            ParseState::DecimalFound              => false,
-            ParseState::DigitsRightOfDecimal      => true,
-            ParseState::ExponentiationFound       => false,
-            ParseState::SignedExponentiationFound => false,
-            ParseState::ExponentiationDigitFound  => true,
-        }
-    }
-}
-
 struct NumberParser {
     state:  ParseState,
     buffer: String,
@@ -40,10 +21,9 @@ struct NumberParser {
 fn parse(json_string: &str) -> Result<Number,ParseError> {
     let mut parser: NumberParser = NumberParser::new();
     for ch in json_string.chars() {
-        parser.push_token(ch);
+        try!(parser.push_token(ch));
     }
-    Ok(0f64)
-    //Ok(json_string.parse::<Number>().unwrap())
+    parser.get_result()
 }
 
 impl NumberParser {
@@ -51,6 +31,19 @@ impl NumberParser {
         NumberParser {
             state:  ParseState::SquareOne,
             buffer: String::new(),
+        }
+    }
+    fn get_result(&self) -> Result<Number,ParseError> {
+        match self.state {
+            ParseState::SquareOne                 => { Err(ParseError::EmptyStringGiven) },
+            ParseState::FirstDigitZero            => { Ok(self.buffer.parse::<Number>().unwrap()) },
+            ParseState::NegativeFound             => { Err(ParseError::EmptyStringGiven) },
+            ParseState::DigitsLeftOfDecimal       => { Ok(self.buffer.parse::<Number>().unwrap()) },
+            ParseState::DecimalFound              => { Err(ParseError::EmptyStringGiven) },
+            ParseState::DigitsRightOfDecimal      => { Ok(self.buffer.parse::<Number>().unwrap()) },
+            ParseState::ExponentiationFound       => { Err(ParseError::EmptyStringGiven) },
+            ParseState::SignedExponentiationFound => { Err(ParseError::EmptyStringGiven) },
+            ParseState::ExponentiationDigitFound  => { Ok(self.buffer.parse::<Number>().unwrap()) },
         }
     }
     fn push_token(&mut self, ch: char) -> Result<(),ParseError> {

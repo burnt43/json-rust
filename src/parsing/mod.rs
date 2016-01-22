@@ -9,7 +9,3 @@ enum ParseError {
     EmptyStringGiven,
     InvalidUnicodeChar(u32),
 }
-
-trait SinkOrNoSink {
-    fn is_sink(&self) -> bool;
-}

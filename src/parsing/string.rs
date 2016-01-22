@@ -1,5 +1,5 @@
 use std::char;
-use parsing::{ParseError, SinkOrNoSink};
+use parsing::{ParseError};
 
 struct StringParser {
     buffer:     String,
