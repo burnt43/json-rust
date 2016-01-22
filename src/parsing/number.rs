@@ -35,15 +35,19 @@ impl NumberParser {
     }
     fn get_result(&self) -> Result<Number,ParseError> {
         match self.state {
-            ParseState::SquareOne                 => { Err(ParseError::EmptyStringGiven) },
-            ParseState::FirstDigitZero            => { Ok(self.buffer.parse::<Number>().unwrap()) },
-            ParseState::NegativeFound             => { Err(ParseError::EmptyStringGiven) },
-            ParseState::DigitsLeftOfDecimal       => { Ok(self.buffer.parse::<Number>().unwrap()) },
-            ParseState::DecimalFound              => { Err(ParseError::EmptyStringGiven) },
-            ParseState::DigitsRightOfDecimal      => { Ok(self.buffer.parse::<Number>().unwrap()) },
-            ParseState::ExponentiationFound       => { Err(ParseError::EmptyStringGiven) },
-            ParseState::SignedExponentiationFound => { Err(ParseError::EmptyStringGiven) },
-            ParseState::ExponentiationDigitFound  => { Ok(self.buffer.parse::<Number>().unwrap()) },
+            ParseState::SquareOne 
+            | ParseState::NegativeFound 
+            | ParseState::DecimalFound 
+            | ParseState::ExponentiationFound 
+            | ParseState::SignedExponentiationFound => {
+                Err(ParseError::EmptyStringGiven)
+            }, //TODO use a real error
+            ParseState::FirstDigitZero
+            | ParseState::DigitsLeftOfDecimal 
+            | ParseState::DigitsRightOfDecimal 
+            | ParseState::ExponentiationDigitFound => {
+                Ok(self.buffer.parse::<Number>().unwrap())
+            },
         }
     }
     fn push_token(&mut self, ch: char) -> Result<(),ParseError> {
@@ -172,11 +176,19 @@ impl NumberParser {
 #[test]
 fn valid_json_numbers_pass() {
     assert_eq!( parse("0").unwrap(), 0 as Number );
+    assert_eq!( parse("0.1").unwrap(), 0.1 as Number );
+    assert_eq!( parse("-32").unwrap(), -32 as Number );
+    assert_eq!( parse("4.5e1").unwrap(), 45 as Number );
+    assert_eq!( parse("3E2").unwrap(), 300 as Number );
+    assert_eq!( parse("5e-2").unwrap(), 0.05 as Number );
+    assert_eq!( parse("6E-1").unwrap(), 0.6 as Number );
 }
 
 #[test]
 fn invalid_json_numbers_fail() {
+    assert!( parse("").is_err() );
     assert!( parse("--").is_err() );
     assert!( parse("0.0.0").is_err() );
     assert!( parse("0.").is_err() );
+    assert!( parse("1.2e1.0").is_err() );
 }
