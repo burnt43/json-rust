@@ -6,32 +6,31 @@ enum ParseState {
     SquareOne,
 }
 
-struct ObjectParser<'a> {
+struct ObjectParser {
     object:     Object,
     state:      ParseState,
-    sub_parser: &'a Parser,
+    sub_parser: Box<Parser>,
 }
 
 fn parse(json_string: &str) -> Result<Object,ParseError> {
-    let nil_parser: NilParser = NilParser::new();
-    let mut parser: ObjectParser = ObjectParser::new(&nil_parser);
+    let mut parser: ObjectParser = ObjectParser::new();
     for ch in json_string.chars() {
         try!(parser.push_token(ch));
     }
     Ok(Object::new())
 }
 
-impl<'a> ObjectParser<'a> {
-    fn new(nil_parser: &'a NilParser) -> ObjectParser<'a> {
+impl ObjectParser {
+    fn new() -> ObjectParser {
         ObjectParser {
             object:     Object::new(),
             state:      ParseState::SquareOne,
-            sub_parser: nil_parser,
+            sub_parser: Box::new(NilParser::new()),
         }
     }
 }
 
-impl<'a> Parser for ObjectParser<'a> {
+impl Parser for ObjectParser {
     fn push_token(&mut self, ch: char) -> Result<(),ParseError> {
         match self.state {
             ParseState::SquareOne => {
