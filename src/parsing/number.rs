@@ -1,5 +1,5 @@
-use parsing::{Parser,ParseError};
-use types::{Number};
+use parsing::{Parser, ParseError};
+use types::{Number, Value};
 
 enum ParseState {
     SquareOne,
@@ -23,7 +23,14 @@ fn parse(json_string: &str) -> Result<Number,ParseError> {
     for ch in json_string.chars() {
         try!(parser.push_token(ch));
     }
-    parser.get_result()
+    match try!(parser.get_result()) {
+        Value::Number(n) => {
+            Ok(n)
+        },
+        _ => {
+            Err(ParseError::EmptyStringGiven) //TODO use better errors
+        }
+    }
 }
 
 impl NumberParser {
@@ -33,7 +40,10 @@ impl NumberParser {
             buffer: String::new(),
         }
     }
-    fn get_result(&self) -> Result<Number,ParseError> {
+}
+
+impl Parser for NumberParser {
+    fn get_result(&self) -> Result<Value,ParseError> {
         match self.state {
             ParseState::SquareOne => { Err(ParseError::EmptyStringGiven) }, 
             ParseState::NegativeFound 
@@ -46,13 +56,10 @@ impl NumberParser {
             | ParseState::DigitsLeftOfDecimal 
             | ParseState::DigitsRightOfDecimal 
             | ParseState::ExponentiationDigitFound => {
-                Ok(self.buffer.parse::<Number>().unwrap())
+                Ok(Value::Number(self.buffer.parse::<Number>().unwrap()))
             },
         }
     }
-}
-
-impl Parser for NumberParser {
     fn push_token(&mut self, ch: char) -> Result<(),ParseError> {
         match self.state {
             ParseState::SquareOne => {

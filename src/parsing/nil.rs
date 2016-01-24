@@ -1,4 +1,5 @@
 use parsing::{Parser, ParseError};
+use types::{Value};
 
 fn parse(string: &str) -> Result<(),ParseError> {
     let mut parser: NilParser = NilParser::new();
@@ -19,6 +20,9 @@ impl NilParser {
 impl Parser for NilParser {
     fn push_token(&mut self, ch: char) -> Result<(),ParseError> {
         Err(ParseError::UnexpectedToken(ch))
+    }
+    fn get_result(&self) -> Result<Value, ParseError> {
+        Err(ParseError::EmptyStringGiven) //TODO make these errors better
     }
 }
 

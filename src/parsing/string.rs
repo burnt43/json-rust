@@ -1,7 +1,8 @@
 use std::char;
 use parsing::{Parser,ParseError};
+use types::{Value};
 
-struct StringParser {
+pub struct StringParser {
     buffer:     String,
     hex_string: String,
     state:      ParseState,
@@ -20,29 +21,36 @@ fn parse(json_string: &str) -> Result<String,ParseError> {
     for ch in json_string.chars() {
         try!(parser.push_token(ch))
     }
-    parser.get_result()
+    match try!(parser.get_result()) {
+        Value::String(s) => {
+            Ok(s)
+        },
+        _ => {
+            Err(ParseError::EmptyStringGiven) //TODO use better errors
+        }
+    }
 }
 
 impl StringParser {
-    fn new() -> StringParser {
+    pub fn new() -> StringParser {
         StringParser{
             buffer:     String::new(),
             hex_string: String::new(),
             state:      ParseState::SquareOne
         }
     }
-    fn get_result(&self) -> Result<String,ParseError> {
+}
+
+impl Parser for StringParser {
+    fn get_result(&self) -> Result<Value, ParseError> {
         match self.state {
             ParseState::SquareOne            => { Err(ParseError::EmptyStringGiven) },
             ParseState::ExpectingChars       => { Err(ParseError::UnterminatedToken('"')) },
             ParseState::EscapeCharFound      => { Err(ParseError::UnterminatedToken('"')) },
             ParseState::HexDigitExpected(_)  => { Err(ParseError::UnterminatedToken('"')) },
-            ParseState::ExpectingEndOfString => { Ok(self.buffer.clone()) },
+            ParseState::ExpectingEndOfString => { Ok(Value::String(self.buffer.clone())) },
         }
     }
-}
-
-impl Parser for StringParser {
     fn push_token(&mut self, ch: char) -> Result<(),ParseError> {
         match self.state {
             ParseState::SquareOne => {
