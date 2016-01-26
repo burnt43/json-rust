@@ -58,6 +58,7 @@ impl Parser for ObjectParser {
                             Ok(_) => {},
                             Err(_) => {
                                 //self.current_pair.0 = self.sub_parser.get_result(); //TODO fix
+                                //maybe i can make method like unwrap_string() or unwrap_number??
                             },
                         }
                     },

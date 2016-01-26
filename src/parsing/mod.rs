@@ -13,6 +13,10 @@ enum ParseError {
     InvalidUnicodeChar(u32),
 }
 
+trait FromJson {
+    fn from_json(&str) -> Result<Box<Self>,ParseError>;
+}
+
 trait Parser {
     fn push_token(&mut self, ch: char) -> Result<(),ParseError>;
     fn get_result(&self) -> Result<Value, ParseError>;

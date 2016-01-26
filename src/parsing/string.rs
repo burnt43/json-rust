@@ -1,5 +1,5 @@
 use std::char;
-use parsing::{Parser,ParseError};
+use parsing::{Parser,ParseError, FromJson};
 use types::{Value};
 
 pub struct StringParser {
@@ -16,17 +16,19 @@ enum ParseState {
     HexDigitExpected(u8),
 }
 
-fn parse(json_string: &str) -> Result<String,ParseError> {
-    let mut parser: StringParser = StringParser::new();
-    for ch in json_string.chars() {
-        try!(parser.push_token(ch))
-    }
-    match try!(parser.get_result()) {
-        Value::String(s) => {
-            Ok(s)
-        },
-        _ => {
-            Err(ParseError::EmptyStringGiven) //TODO use better errors
+impl FromJson for String {
+    fn from_json(json_string: &str) -> Result<Box<String>,ParseError> {
+        let mut parser: StringParser = StringParser::new();
+        for ch in json_string.chars() {
+            try!(parser.push_token(ch))
+        }
+        match try!(parser.get_result()) {
+            Value::String(s) => {
+                Ok(Box::new(s))
+            },
+            _ => {
+                Err(ParseError::EmptyStringGiven) //TODO use better errors
+            }
         }
     }
 }
@@ -165,32 +167,32 @@ impl Parser for StringParser {
 // HAPPY PATHS
 #[test]
 fn parse_an_empty_string() {
-    assert_eq!(&parse("\"\"").unwrap(),"");
+    assert_eq!(&*String::from_json("\"\"").unwrap(),"");
 }
 
 #[test]
 fn parse_a_non_empty_string() {
-    assert_eq!(&parse("\"foobar\"").unwrap(),"foobar");
+    assert_eq!(&*String::from_json("\"foobar\"").unwrap(),"foobar");
 }
 
 #[test]
 fn parse_strings_with_escapes() {
-    assert_eq!(&parse("\"\\n\"").unwrap(),"\n");
-    assert_eq!(&parse("\"\\u0041\"").unwrap(),"A");
+    assert_eq!(&*String::from_json("\"\\n\"").unwrap(),"\n");
+    assert_eq!(&*String::from_json("\"\\u0041\"").unwrap(),"A");
 }
 
 // SAD PATHS
 #[test]
 fn parse_unterminated_string_fails() {
-    assert!(parse("\"unterminated string").is_err());
+    assert!(String::from_json("\"unterminated string").is_err());
 }
 
 #[test]
 fn parse_nothingness_fails() {
-    assert!(parse("").is_err());
+    assert!(String::from_json("").is_err());
 }
 
 #[test]
 fn parse_invalid_escape_sequence_fails() {
-    assert!(parse("\\h").is_err());
+    assert!(String::from_json("\\h").is_err());
 }
