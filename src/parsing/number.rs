@@ -1,4 +1,4 @@
-use parsing::{Parser, ParseError};
+use parsing::{Parser, ParseError, FromJson};
 use types::{Number, Value};
 
 enum ParseState {
@@ -18,17 +18,19 @@ struct NumberParser {
     buffer: String,
 }
 
-fn parse(json_string: &str) -> Result<Number,ParseError> {
-    let mut parser: NumberParser = NumberParser::new();
-    for ch in json_string.chars() {
-        try!(parser.push_token(ch));
-    }
-    match try!(parser.get_result()) {
-        Value::Number(n) => {
-            Ok(n)
-        },
-        _ => {
-            Err(ParseError::EmptyStringGiven) //TODO use better errors
+impl FromJson for Number {
+    fn from_json(json_string: &str) -> Result<Box<Number>, ParseError> {
+        let mut parser: NumberParser = NumberParser::new();
+        for ch in json_string.chars() {
+            try!(parser.push_token(ch));
+        }
+        match try!(parser.get_result()) {
+            Value::Number(n) => {
+                Ok(Box::new(n))
+            },
+            _ => {
+                Err(ParseError::EmptyStringGiven) //TODO use better errors
+            }
         }
     }
 }
@@ -185,21 +187,21 @@ impl Parser for NumberParser {
 
 #[test]
 fn valid_json_numbers_pass() {
-    assert_eq!( parse("0").unwrap(), 0 as Number );
-    assert_eq!( parse("0.1").unwrap(), 0.1 as Number );
-    assert_eq!( parse("-32").unwrap(), -32 as Number );
-    assert_eq!( parse("4.5e1").unwrap(), 45 as Number );
-    assert_eq!( parse("3E2").unwrap(), 300 as Number );
-    assert_eq!( parse("5e-2").unwrap(), 0.05 as Number );
-    assert_eq!( parse("6E-1").unwrap(), 0.6 as Number );
-    assert_eq!( parse("3e+3").unwrap(), 3000 as Number );
+    assert_eq!( *Number::from_json("0").unwrap(), 0 as Number );
+    assert_eq!( *Number::from_json("0.1").unwrap(), 0.1 as Number );
+    assert_eq!( *Number::from_json("-32").unwrap(), -32 as Number );
+    assert_eq!( *Number::from_json("4.5e1").unwrap(), 45 as Number );
+    assert_eq!( *Number::from_json("3E2").unwrap(), 300 as Number );
+    assert_eq!( *Number::from_json("5e-2").unwrap(), 0.05 as Number );
+    assert_eq!( *Number::from_json("6E-1").unwrap(), 0.6 as Number );
+    assert_eq!( *Number::from_json("3e+3").unwrap(), 3000 as Number );
 }
 
 #[test]
 fn invalid_json_numbers_fail() {
-    assert!( parse("").is_err() );
-    assert!( parse("--").is_err() );
-    assert!( parse("0.0.0").is_err() );
-    assert!( parse("0.").is_err() );
-    assert!( parse("1.2e1.0").is_err() );
+    assert!( Number::from_json("").is_err() );
+    assert!( Number::from_json("--").is_err() );
+    assert!( Number::from_json("0.0.0").is_err() );
+    assert!( Number::from_json("0.").is_err() );
+    assert!( Number::from_json("1.2e1.0").is_err() );
 }
